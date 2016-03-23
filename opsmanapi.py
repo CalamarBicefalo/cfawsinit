@@ -215,6 +215,48 @@ class OpsManApi(object):
                 raise Exception("Unable to complete installation")
             self.browser.submit_form(forms.form.Form(inst_form))
 
+    def execute_on_opsman(self, opts, cmd):
+        host = urlparse.urlparse(self.url).netloc
+        from sh import ssh
+        try:
+            ssh("-oStrictHostKeyChecking=no",
+                "-i {} ".format(opts['ssh_private_key_path']),
+                "ubuntu@"+host,
+                cmd)
+        except Exception as ex:
+            print "Error running", cmd
+            print ex.stdout
+            print ex.stderr
+            raise
+
+    def copy_to_opsman(self, opts, source, target=""):
+        host = urlparse.urlparse(self.url).netloc
+        from sh import scp
+        try:
+            scp("-oStrictHostKeyChecking=no",
+                "-i {} ".format(opts['ssh_private_key_path']),
+                source,
+                "ubuntu@"+host+":"+target)
+        except Exception as ex:
+            print "Error copying", source, target
+            print ex.stdout
+            print ex.stderr
+            raise
+
+    def create_ert_databases(self, opts):
+        file_name = 'create_dbs.ddl'
+        self.copy_to_opsman(opts, THIS_DIR+"/"+file_name, file_name)
+        CMD = (
+            'mysql --host={PcfRdsAddress} '
+            '--user={PcfRdsUsername} '
+            '--password={PcfRdsPassword} '
+            '< {file_name}')
+        cmd = CMD.format(
+            file_name=file_name,
+            **self.var)
+
+        self.execute_on_opsman(opts, cmd)
+
 
 class AuthException(Exception):
     pass
@@ -471,48 +513,6 @@ class OpsManApi17(OpsManApi):
         sys.stdout.flush()
         self.execute_on_opsman(opts, cmd)
         print "done"
-
-    def execute_on_opsman(self, opts, cmd):
-        host = urlparse.urlparse(self.url).netloc
-        from sh import ssh
-        try:
-            ssh("-oStrictHostKeyChecking=no",
-                "-i {} ".format(opts['ssh_private_key_path']),
-                "ubuntu@"+host,
-                cmd)
-        except Exception as ex:
-            print "Error running", cmd
-            print ex.stdout
-            print ex.stderr
-            raise
-
-    def copy_to_opsman(self, opts, source, target=""):
-        host = urlparse.urlparse(self.url).netloc
-        from sh import scp
-        try:
-            scp("-oStrictHostKeyChecking=no",
-                "-i {} ".format(opts['ssh_private_key_path']),
-                source,
-                "ubuntu@"+host+":"+target)
-        except Exception as ex:
-            print "Error copying", source, target
-            print ex.stdout
-            print ex.stderr
-            raise
-
-    def create_ert_databases(self, opts):
-        file_name = 'create_dbs.ddl'
-        self.copy_to_opsman(opts, THIS_DIR+"/"+file_name, file_name)
-        CMD = (
-            'mysql --host={PcfRdsAddress} '
-            '--user={PcfRdsUsername} '
-            '--password={PcfRdsPassword} '
-            '< {file_name}')
-        cmd = CMD.format(
-            file_name=file_name,
-            **self.var)
-
-        self.execute_on_opsman(opts, cmd)
 
     def is_deployed(self, product):
         products = {
