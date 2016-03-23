@@ -12,12 +12,13 @@ with Elastic Runtime tile staged.
 1. Supports Ops Manager 1.6 and 1.7.
 2. Uses network.pivotal.io / pivnet to resolve and fetch needed artifacts.
 3. Idempotence
+4. Creates Elastic Runtime
+5. Registers correct dns entries for the domain 
+6. Supports HA configuration in 1.7
 
 ## TODO
-1. Fully configure elastic runtime
-2. Autocreate self signed ssl cert and arn
-3. Register Routes
-4. Configure HA parameters in OpsManager
+1. Autocreate self signed ssl cert and arn
+2. Show first failure event when stack creation fails.
 
 ## Goals
 1. Minimal input configuration file
