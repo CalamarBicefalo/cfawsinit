@@ -216,6 +216,11 @@ def deploy(prepared_file, timeout=300):
         route53=route53,
         elb=elb)
     print "Ops manager is now available at ", ops.url
+
+    if not hasattr(ops, 'install_elastic_runtime'):
+        print ops, "Does not support deploying elastic runtime on < 1.7"
+        return 0
+
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
     ops.wait_for_deployed('cf', timeout=timeout)

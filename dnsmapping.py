@@ -9,6 +9,8 @@ def map_ert_domain(stackname, domain, lbname=None,
     """
     route53 = route53 or boto3.client('route53')
     elb = elb or boto3.client('elb')
+    prefixes = ["", "*.", "*.system.", "*.apps."]
+    names = [prefix + domain for prefix in prefixes]
 
     if not domain.endswith('.'):
         domain += '.'
@@ -16,9 +18,6 @@ def map_ert_domain(stackname, domain, lbname=None,
     zone = next(
         (z for z in route53.list_hosted_zones()['HostedZones']
          if domain.endswith(z['Name'])), None)
-
-    if zone is None:
-        raise Exception(domain + " Is not managed in route53")
 
     # based on standard naming
     lbname = lbname or stackname + "-pcf-elb"
@@ -30,11 +29,16 @@ def map_ert_domain(stackname, domain, lbname=None,
 
     dnsname = resp['LoadBalancerDescriptions'][0]['DNSName']
 
+    if zone is None:
+        print domain + " Is not managed in route53"
+        print "Manually map {} <-- {}".format(dnsname, names)
+        return
+
     changes = [
         {
             'Action': 'UPSERT',
             'ResourceRecordSet': {
-                'Name': prefix + domain,
+                'Name': name,
                 'Type': 'CNAME',
                 'TTL': 300,
                 'ResourceRecords': [
@@ -43,7 +47,7 @@ def map_ert_domain(stackname, domain, lbname=None,
                     },
                 ],
             }
-        } for prefix in ["", "*.", "*.system.", "*.apps."]]
+        } for name in names]
 
     route53.change_resource_record_sets(
         HostedZoneId=zone['Id'],
