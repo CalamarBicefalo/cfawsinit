@@ -91,3 +91,7 @@ products:
     instance:
       identifier: instances
       value: 0
+  - identifier: compilation
+    instance:
+      identifier: instances
+      value: 8

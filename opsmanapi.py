@@ -76,7 +76,7 @@ class OpsManApi(object):
                 raise Exception("Could not establish user: {}".
                                 format(jx['errors']))
             else:
-                print "Admin user is already established"
+                print "Admin user is previously established"
         return self
 
     def login(self):
@@ -90,23 +90,22 @@ class OpsManApi(object):
                             format(self.username, self.browser.response.text))
         return self
 
-    def _is_configured(self):
-        # check if this is already prepared
+    def is_prepared(self, product='p-bosh'):
+        # check if this is previously prepared
         resp = requests.get(
             self.url+"/api/installation_settings",
             verify=False,
             auth=self.auth)
         if resp.status_code == 200:
-            jx = resp.json()
-            if 'singleton_availability_zone_reference' in jx['products'][0]\
-                    and jx['products'][0]['prepared'] is True:
-                print "Ops Manager is already prepared"
+            cfg = stemplate.Cfg(resp.json())
+            if cfg['products'][product].obj.get('prepared', False) is True:
+                print product, "is previously prepared"
                 return True
 
         return False
 
     def process_action(self, action, mappings):
-        if self._is_configured():
+        if self.is_prepared():
             return self
 
         self.browser.open(self.url + "/", verify=False)
@@ -314,7 +313,7 @@ class OpsManApi17(OpsManApi):
                 raise Exception("Could not establish user: {}".
                                 format(jx['errors']))
             else:
-                print "Admin user is already established"
+                print "Admin user is previously established"
         return self
 
     def login(self):
@@ -372,7 +371,7 @@ class OpsManApi17(OpsManApi):
         return yamlfile, yobj
 
     def configure(self, filename=None, action=None, force=False):
-        if not force and self._is_configured():
+        if not force and self.is_prepared():
             return self
         yamlfile, _ = self.resolve_yml(filename=filename)
         files = {'installation[file]':
@@ -515,11 +514,69 @@ class OpsManApi17(OpsManApi):
 
         self.execute_on_opsman(opts, cmd)
 
+    def is_deployed(self, product):
+        products = {
+            p['type']: p
+            for p in self.getJSON(
+                "/api/v0/deployed/products")}
+        return product in products
+
+    def wait_for_deployed(self, product, timeout=400):
+        """
+        wait until a product is deployed
+        """
+        def should_wait():
+            return not self.is_deployed(product)
+
+        if should_wait() is False:
+            print product, "previously deployed"
+            return
+
+        print "Waiting for {} to deploy...".format(product),
+        sys.stdout.flush()
+        waitFor = wait_util.wait_while(should_wait)
+        waitFor(timeout)
+        print "done"
+
+    def find_lastest_install(self):
+        # if ops manager had better api to simply get
+        # the currently active install
+        # we would not need this
+        instno = 1
+        resp = self.get("/api/v0/installation/{}".format(instno))
+        while resp.status_code == 200:
+            instno += 1
+            resp = self.get("/api/v0/installation/{}".format(instno))
+
+        return instno-1
+
+    def wait_while_install_running(self, timeout=400):
+        """
+        if there is an ongoing install, wait for
+        it to finish
+        """
+        instno = self.find_lastest_install()
+
+        def should_wait():
+            respjson = self.getJSON("/api/v0/installation/{}".format(instno))
+            return respjson.get("status", "success") == "running"
+
+        print "Waiting while install {} is running...".format(instno),
+        sys.stdout.flush()
+        waitFor = wait_util.wait_while(should_wait)
+        waitFor(timeout)
+        print "done"
+        print self.getJSON("/api/v0/installation/{}".format(instno))
+
     def install_elastic_runtime(self, opts, timeout=400):
         """
         idempotent just like everything else
         """
-        # check if it is already installed.
+        # prereq is 'p-bosh' is fully deployed
+
+        self.wait_for_deployed('p-bosh', timeout=timeout)
+
+        # check if it is previously installed.
         deployed_products = {
             p['type']: p
             for p in self.getJSON("/api/v0/deployed/products")}
@@ -537,13 +594,16 @@ class OpsManApi17(OpsManApi):
 
         if 'cf' in staged_products:
             print "Elastic runtime ", products['cf']['product_version'],
-            print "is already staged"
+            print "is previously staged"
         else:
             staged_products = self.stage_elastic_runtime(
                 opts, timeout, products)
         return self
 
     def configure_elastic_runtime(self, opts, timeout=300):
+        if self.is_prepared('cf'):
+            return self
+
         current = self.getJSON("/api/installation_settings")
         yaml.safe_dump(
             current,
@@ -568,3 +628,5 @@ class OpsManApi17(OpsManApi):
         self.postJSON(
             "/api/installation_settings",
             files=files)
+        self.apply_changes()
+        return self

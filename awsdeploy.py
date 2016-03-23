@@ -12,6 +12,7 @@ import pivnet
 import opsmanapi
 import wait_util
 import sys
+import dnsmapping
 
 
 # Othwerise urllib3 warns about
@@ -144,10 +145,10 @@ def configure_ops_manager(opts, stack_vars, inst):
 
 
 def wait_for_stack_ready(st, timeout):
-    waiter = wait_util.wait_while(
+    waitFor = wait_util.wait_while(
         lambda: st.stack_status == 'CREATE_IN_PROGRESS',
         lambda: st.reload())
-    waiter(timeout)
+    waitFor(timeout)
 
     if st.stack_status == 'CREATE_COMPLETE':
         return True
@@ -157,7 +158,7 @@ def wait_for_stack_ready(st, timeout):
 
 
 def wait_for_opsman_ready(inst, timeout):
-    def shoud_wait():
+    def should_wait():
         try:
             resp = requests.head(
                 "https://{}/".format(inst.public_dns_name),
@@ -169,8 +170,8 @@ def wait_for_opsman_ready(inst, timeout):
             print ex
         return True
 
-    waiter = wait_util.wait_while(shoud_wait)
-    return waiter(timeout)
+    waitFor = wait_util.wait_while(should_wait)
+    waitFor(timeout)
 
 
 #
@@ -191,6 +192,8 @@ def deploy(prepared_file, timeout=300):
                       region_name=opts['region'])
     ec2 = session.resource("ec2")
     cff = session.resource("cloudformation")
+    route53 = session.client("route53")
+    elb = session.client("elb")
 
     stack = create_stack(opts, ec2, cff)
     # ensure that stack is ready
@@ -203,17 +206,20 @@ def deploy(prepared_file, timeout=300):
     stack_vars = get_stack_outputvars(opsman_stack, ec2)
     stack_vars.update(get_stack_outputvars(stack, ec2))
     ops_manager_inst = launch_ops_manager(opts, stack_vars, ec2)
-
     # ensure that ops manager is ready to receive requests
     wait_for_opsman_ready(ops_manager_inst, timeout)
     ops = configure_ops_manager(opts, stack_vars, ops_manager_inst)
-
     ops.create_ert_databases(opts)
+    dnsmapping.map_ert_domain(
+        stackname=opts['stack-name'],
+        domain=opts['domain'],
+        route53=route53,
+        elb=elb)
+    print "Ops manager is now available at ", ops.url
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
-    # TODO ensure that ops manager is ready to install ert
-
-    print "Ops manager is now available at ", ops.url
+    ops.wait_for_deployed('cf', timeout=timeout)
+    ops.wait_while_install_running(timeout=timeout)
 
 
 AMI_PREFIX = "pivotal-ops-manager-v"
