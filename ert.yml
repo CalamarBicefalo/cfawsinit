@@ -10,6 +10,8 @@ products:
     value: 4443
   - identifier: allow_cross_container_traffic
     value: true
+  - identifier: networking_point_of_entry
+    value: external_non_ssl
   - identifier: system_database
     options:
     - identifier: external
