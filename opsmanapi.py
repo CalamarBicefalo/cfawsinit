@@ -10,6 +10,7 @@ from StringIO import StringIO
 import copy
 import sys
 import stemplate
+import tempfile
 import wait_util
 
 
@@ -23,7 +24,7 @@ THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get(*args, **kwargs):
     # bs4.find("span", {'class': 'version'})
-    resp = requests. head(
+    resp = requests.head(
         args[0]+"/uaa/login",
         verify=False,
         allow_redirects=False)
@@ -56,6 +57,7 @@ class OpsManApi(object):
             self.s3_endpoint = "https://s3-{}.amazonaws.com".format(region)
         self.action_map_file = THIS_DIR+'/opsman_mappings.yml'
         self.opts = opts
+        self._login = False
 
     def setup(self):
         setup_data = {'setup[eula_accepted]': 'true',
@@ -215,14 +217,124 @@ class OpsManApi(object):
                 raise Exception("Unable to complete installation")
             self.browser.submit_form(forms.form.Form(inst_form))
 
-    def execute_on_opsman(self, opts, cmd):
+    boshprefix = (
+        'BUNDLE_GEMFILE=/home/tempest-web/tempest/web/vendor/bosh/Gemfile '
+        'bundle exec bosh ')
+
+    def boshlogin(self, out=None):
+        """
+        ensure that bosh on opsmanager in logged in
+        """
+        boshcmd = (
+            self.boshprefix +
+            '-n '
+            '--ca-cert /var/tempest/workspaces/default/root_ca_certificate '
+            'target 10.0.16.10')
+        self.execute_on_opsman(
+            self.opts,
+            boshcmd,
+            out)
+
+        handle, bosh_cfg_path = tempfile.mkstemp()
+        self.copy_from_opsman(self.opts, ".bosh_config", bosh_cfg_path)
+        bosh_cfg = yaml.load(open(bosh_cfg_path, 'rt'))
+
+        if 'auth' in bosh_cfg:
+            all_set = True
+            for dep, dd in bosh_cfg['auth'].items():
+                if 'access_token' not in dd:
+                    all_set = False
+            if all_set:
+                print "Bosh prior login present"
+                self._login = True
+                return self
+
+        # set deployment and auth fields
+        if 'deployment' not in bosh_cfg:
+            deployed_products = {
+                p['type']: p
+                for p in self.getJSON("/api/v0/deployed/products")}
+            boshcmd = (
+                self.boshprefix +
+                '-n deployment '
+                '/var/tempest/workspaces/default/deployments/{}.yml').format(
+                    deployed_products['cf']['installation_name'])
+
+            self.execute_on_opsman(
+                self.opts,
+                boshcmd,
+                out)
+
+        respjson = self.getJSON(
+            "/api/v0/deployed/director/credentials/director_credentials")
+        creds = respjson['credential']['value']
+
+        _, cred_path = tempfile.mkstemp()
+        with open(cred_path, "wt") as handle:
+            handle.write(
+                creds['identity'] +
+                '\n' +
+                creds['password'] +
+                '\n')
+            handle.close()
+
+        self.copy_to_opsman(self.opts, cred_path, "creds.txt")
+        boshcmd = (
+            self.boshprefix +
+            'login < creds.txt')
+
+        try:
+            self.execute_on_opsman(
+                self.opts,
+                boshcmd,
+                out)
+        except Exception as ex:
+            if 'Non-interactive UAA login is not supported'\
+                    not in str(ex.stderr):
+                raise
+
+        self._login = True
+        return self
+
+        """
+        auth = bosh_cfg.get('auth', {})
+        target_auth = getUAA_Auth_Header(
+            self.url,
+            creds['identity'],
+            creds['password'],
+            client_id='bosh_cli'
+            )
+        raise Exception()
+        auth[bosh_cfg['target']] = target_auth
+        bosh_cfg['auth'] = auth
+        """
+    def bosh(self, cmd, out=None):
+        if not self._login:
+            self.boshlogin()
+
+        boshcmd = (
+            self.boshprefix +
+            cmd)
+        self.execute_on_opsman(
+            self.opts,
+            boshcmd,
+            out)
+
+    def execute_on_opsman(self, opts, cmd, out=None):
         host = urlparse.urlparse(self.url).netloc
         from sh import ssh
+
+        def outfn(line):
+            print line,
+
+        out = out or outfn
         try:
             ssh("-oStrictHostKeyChecking=no",
-                "-i {} ".format(opts['ssh_private_key_path']),
+                "-i {} ".format(
+                    os.path.expanduser(opts['ssh_private_key_path'])),
                 "ubuntu@"+host,
-                cmd)
+                cmd,
+                _out=out)
         except Exception as ex:
             print "Error running", cmd
             print ex.stdout
@@ -237,6 +349,20 @@ class OpsManApi(object):
                 "-i {} ".format(opts['ssh_private_key_path']),
                 source,
                 "ubuntu@"+host+":"+target)
+        except Exception as ex:
+            print "Error copying", source, target
+            print ex.stdout
+            print ex.stderr
+            raise
+
+    def copy_from_opsman(self, opts, source, target=""):
+        host = urlparse.urlparse(self.url).netloc
+        from sh import scp
+        try:
+            scp("-oStrictHostKeyChecking=no",
+                "-i {} ".format(opts['ssh_private_key_path']),
+                "ubuntu@"+host+":"+source,
+                target)
         except Exception as ex:
             print "Error copying", source, target
             print ex.stdout
@@ -293,19 +419,20 @@ class CFAuthHandler(requests.auth.AuthBase):
         return resp.json()
 
 
-def getUAA_Auth_Header(username, password, url):
+def getUAA_Auth_Header(url, username, password, client_id="opsman"):
+    # client_id = bosh_cli
     resp = requests.post(
         url+"/uaa/oauth/token",
         verify=False,
         data={'grant_type': 'password',
               'username': username,
               'password': password},
-        auth=('opsman', ''))
+        auth=(client_id, ''))
 
     if resp.status_code != 200:
         raise Exception("Unable to authenticate "+resp.text)
 
-    return "Bearer "+resp.json()['access_token']
+    return resp.json()
 
 
 class OpsManApi17(OpsManApi):
@@ -360,7 +487,7 @@ class OpsManApi17(OpsManApi):
 
     def login(self):
         self.auth = CFAuthHandler(self.username, self.password)
-        resp = self.get("/api/v0/api_version")
+        resp = self.get("/eula")
         if resp.status_code >= 400:
             exp = Exception("Error login in {}\n{}".
                             format(self.username, resp.text))
@@ -400,6 +527,8 @@ class OpsManApi17(OpsManApi):
         filename = filename or self.action_map_file
         yobj = yaml.load(open(filename, 'rt'))
         var = copy.copy(self.var)
+        if 'PcfKeyPairName' not in var:
+            var['PcfKeyPairName'] = self.opts['ssh_key_name']
         var.update({"Opts_"+k: v for k, v in self.opts.items()})
         var['v'] = self
         stemplate.resolve(
@@ -413,34 +542,50 @@ class OpsManApi17(OpsManApi):
         return yamlfile, yobj
 
     def configure(self, filename=None, action=None, force=False):
-        if not force and self.is_prepared():
-            return self
-        yamlfile, _ = self.resolve_yml(filename=filename)
-        files = {'installation[file]':
-                 ('installation-integration-minimal.yml',
-                     yamlfile, 'text/yaml')}
-        resp = requests.post(
-            self.url+"/api/installation_settings",
-            files=files,
-            verify=False,
-            auth=self.auth)
-        if resp.status_code != 200:
-            raise Exception("Unable to configure "+resp.text)
+        force = force or 'FORCE_PREPARE' in os.environ
+        if force or not self.is_prepared():
+            yamlfile, _ = self.resolve_yml(filename=filename)
+            files = {'installation[file]':
+                     ('installation-integration-minimal.yml',
+                         yamlfile, 'text/yaml')}
+            resp = requests.post(
+                self.url+"/api/installation_settings",
+                files=files,
+                verify=False,
+                auth=self.auth)
+            if resp.status_code != 200:
+                raise Exception("Unable to configure "+resp.text)
 
-        print "Configuring Ops Manager...",
+        # check if its either deployed or staged
+        if self.is_deployed('p-bosh'):
+            return self
+
+        print "Starting Ops Manager Director install...",
         sys.stdout.flush()
-        self.apply_changes()
+        self.apply_changes(in_progress_ok=True)
         print "Done"
         return self
 
-    def apply_changes(self):
+    # TODO enable errands, it is needed now
+    def apply_changes(self, in_progress_ok=False, post_args=None):
+        postdata = [('ignore_warnings', True)]
+        if post_args is not None:
+            postdata += post_args
+
         resp = requests.post(
-            self.url+'/api/v0/installation',
+            self.url+'/api/v0/installations',
             verify=False,
-            data={'ignore_warnings': True},
+            data=postdata,
             auth=self.auth)
+        if resp.status_code == 422:
+            if 'install in progress' not in resp.text.lower():
+                print resp.text
+            if in_progress_ok is True:
+                return
         if resp.status_code != 200:
-            raise Exception("Unable to start install, "+resp.text)
+            raise Exception(
+                "Unable to start install, status: {}, error: {}".format(
+                    resp.status_code, resp.text))
 
     def stage_elastic_runtime(self, opts, timeout, products):
         # TODO if we are running in ec2, don't have to do this
@@ -453,7 +598,7 @@ class OpsManApi17(OpsManApi):
             def should_wait():
                 products.update({
                     p['name']: p
-                    for p in self.getJSON("/api/v0/products")})
+                    for p in self.getJSON("/api/v0/available_products")})
                 return 'cf' not in products
 
             print "Waiting for elastic runtime to be available for staging"
@@ -499,7 +644,7 @@ class OpsManApi17(OpsManApi):
     def _add_ert_to_opsman(self, opts, ert_file):
         # TODO ensure that ops manager is ready to install ert
         CMD = (
-            'curl -v -k https://localhost/api/v0/products '
+            'curl -v -k https://localhost/api/v0/available_products '
             '-F \'product[file]=@{filename}\' '
             '-X POST '
             '-H "Authorization: {auth}"')
@@ -513,6 +658,13 @@ class OpsManApi17(OpsManApi):
         sys.stdout.flush()
         self.execute_on_opsman(opts, cmd)
         print "done"
+
+    def is_staged(self, product):
+        products = {
+            p['type']: p
+            for p in self.getJSON(
+                "/api/v0/staged/products")}
+        return product in products
 
     def is_deployed(self, product):
         products = {
@@ -539,16 +691,12 @@ class OpsManApi17(OpsManApi):
         print "done"
 
     def find_lastest_install(self):
-        # if ops manager had better api to simply get
-        # the currently active install
-        # we would not need this
-        instno = 1
-        resp = self.get("/api/v0/installation/{}".format(instno))
-        while resp.status_code == 200:
-            instno += 1
-            resp = self.get("/api/v0/installation/{}".format(instno))
+        instno = -1
+        respjson = self.getJSON("/api/v0/installations")
+        if len(respjson["installations"]) > 0:
+            instno = max([inst["id"] for inst in respjson["installations"]])
 
-        return instno-1
+        return instno
 
     def wait_while_install_running(self, timeout=400):
         """
@@ -557,8 +705,11 @@ class OpsManApi17(OpsManApi):
         """
         instno = self.find_lastest_install()
 
+        if instno == -1:
+            return
+
         def should_wait():
-            respjson = self.getJSON("/api/v0/installation/{}".format(instno))
+            respjson = self.getJSON("/api/v0/installations/{}".format(instno))
             return respjson.get("status", "success") == "running"
 
         print "Waiting while install {} is running...".format(instno),
@@ -566,7 +717,7 @@ class OpsManApi17(OpsManApi):
         waitFor = wait_util.wait_while(should_wait)
         waitFor(timeout)
         print "done"
-        print self.getJSON("/api/v0/installation/{}".format(instno))
+        print self.getJSON("/api/v0/installations/{}".format(instno))
 
     def install_elastic_runtime(self, opts, timeout=400):
         """
@@ -582,7 +733,7 @@ class OpsManApi17(OpsManApi):
             for p in self.getJSON("/api/v0/deployed/products")}
         products = {
             p['name']: p
-            for p in self.getJSON("/api/v0/products")}
+            for p in self.getJSON("/api/v0/available_products")}
 
         if 'cf' in deployed_products:
             print "Elastic runtime is deployed", products['cf']
@@ -600,18 +751,20 @@ class OpsManApi17(OpsManApi):
                 opts, timeout, products)
         return self
 
-    def configure_elastic_runtime(self, opts, timeout=300):
-        if self.is_prepared('cf'):
+    def configure_elastic_runtime(self, opts, timeout=300, force=False):
+        force = force or 'FORCE_PREPARE' in os.environ
+        if not force and self.is_prepared('cf'):
             return self
 
         current = self.getJSON("/api/installation_settings")
+        cfg_current = stemplate.Cfg(current)
         yaml.safe_dump(
             current,
             open('installation_settings_pre.yml', 'wt'),
             indent=2, default_flow_style=False)
         _, yobj = self.resolve_yml(filename=THIS_DIR+"/ert.yml")
         stemplate.cfgmerge(
-            stemplate.Cfg(current),
+            cfg_current,
             stemplate.Cfg(yobj))
         yaml.safe_dump(
             current,
@@ -624,9 +777,19 @@ class OpsManApi17(OpsManApi):
         files = {'installation[file]':
                  ('installation-integration-minimal.yml',
                      yamlfile, 'text/yaml')}
-
+        prod_guid = cfg_current['products']['cf'].obj['guid']
+        # FIXME get this from the manifest
+        # This can be done by unzip  cf-1.7.0-build.167.pivotal metadata/cf.yml
+        # and reading from post_deploy_errands key in that yml
+        enabled_errands =\
+            ['smoke-tests', 'notifications',
+             # ['smoke-tests', 'push-apps-manager', 'notifications',
+             'notifications-ui', 'autoscaling', 'autoscaling-register-broker']
+        post_args =\
+            [("enabled_errands[{}][post_deploy_errands][]".
+                format(prod_guid), err) for err in enabled_errands]
         self.postJSON(
             "/api/installation_settings",
             files=files)
-        self.apply_changes()
+        self.apply_changes(post_args=post_args)
         return self

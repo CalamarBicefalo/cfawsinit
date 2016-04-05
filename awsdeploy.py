@@ -12,6 +12,7 @@ import pivnet
 import opsmanapi
 import wait_util
 import sys
+import json
 import dnsmapping
 
 
@@ -60,18 +61,25 @@ def create_stack(opts, ec2, cff, timeout=300):
         else:
             raise Exception(msg)
 
+    templateBody = open(
+        opts['elastic-runtime']['cloudformation-template'], 'rt').read()
+    templ = json.loads(templateBody)
     # stack does not exist create it
     args = {"01NATKeyPair": opts['ssh_key_name'],
             "05RdsUsername": opts['rds-username'],
             "06RdsPassword": opts['rds-password'],
             "07SSLCertificateARN": opts['ssl_cert_arn']}
+    if 'opsman-template-url' in opts:
+        args['08OpsManagerTemplate'] = opts['opsman-template-url']
+
+    # filter out args that are not needed
+    args = {k: v for k, v in args.items() if k in templ["Parameters"]}
     paramaters = [{"ParameterKey": k, "ParameterValue": v,
                    "UsePreviousValue": True} for k, v in args.items()]
     tags = [{"Key": "email", "Value": opts["email"]}]
     st = cff.create_stack(
         StackName=opts['stack-name'],
-        TemplateBody=open(opts['elastic-runtime']['cloudformation-template'],
-                          'rt').read(),
+        TemplateBody=templateBody,
         Tags=tags,
         Parameters=paramaters,
         Capabilities=['CAPABILITY_IAM'])
@@ -102,7 +110,7 @@ def launch_ops_manager(opts, stack_vars, ec2):
         ImageId=opts['ops-manager']['ami-id'],
         MinCount=1,
         MaxCount=1,
-        KeyName=stack_vars['PcfKeyPairName'],
+        KeyName=stack_vars.get('PcfKeyPairName', opts['ssh_key_name']),
         InstanceType='m3.large',
         NetworkInterfaces=[
             {'DeviceIndex': 0,
@@ -221,8 +229,11 @@ def deploy(prepared_file, timeout=300):
         print ops, "Does not support deploying elastic runtime on < 1.7"
         return 0
 
+    ops.wait_for_deployed('p-bosh', timeout=timeout)
+    ops.bosh("vms")
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
+    ops.bosh("vms")
     ops.wait_for_deployed('cf', timeout=timeout)
     ops.wait_while_install_running(timeout=timeout)
 
