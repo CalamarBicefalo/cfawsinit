@@ -230,7 +230,7 @@ def deploy(prepared_file, timeout=300):
         return 0
 
     ops.wait_for_deployed('p-bosh', timeout=timeout)
-    ops.bosh("vms")
+    ops.bosh("status")
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
     ops.bosh("vms")

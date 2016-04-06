@@ -13,6 +13,7 @@ import stemplate
 import tempfile
 import wait_util
 
+import pivnet
 
 # Othwerise urllib3 warns about
 # self signed certs
@@ -254,16 +255,18 @@ class OpsManApi(object):
             deployed_products = {
                 p['type']: p
                 for p in self.getJSON("/api/v0/deployed/products")}
-            boshcmd = (
-                self.boshprefix +
-                '-n deployment '
-                '/var/tempest/workspaces/default/deployments/{}.yml').format(
-                    deployed_products['cf']['installation_name'])
+            if 'cf' in deployed_products:
+                boshcmd = (
+                    self.boshprefix +
+                    '-n deployment '
+                    '/var/tempest/workspaces/'
+                    'default/deployments/{}.yml').format(
+                        deployed_products['cf']['installation_name'])
 
-            self.execute_on_opsman(
-                self.opts,
-                boshcmd,
-                out)
+                self.execute_on_opsman(
+                    self.opts,
+                    boshcmd,
+                    out)
 
         respjson = self.getJSON(
             "/api/v0/deployed/director/credentials/director_credentials")
@@ -621,6 +624,17 @@ class OpsManApi17(OpsManApi):
         it runs the command *from* ops manager
         so it can be locally uploaded
         """
+        piv = pivnet.Pivnet(token=self.opts['PIVNET_TOKEN'])
+        rel, _, _ = opts['elastic-runtime']['image-file-url'].partition(
+            'product_files')
+
+        resp = piv.post(rel+"eula_acceptance")
+        if resp.status_code != 200:
+            raise Exception(
+                "Could not auto accept eula" +
+                opts['elastic-runtime']['image-file-url'] +
+                " " + str(resp.headers))
+
         filename = opts['elastic-runtime']['image-filename']
         ver = opts['elastic-runtime']['version']
         print "Downloading ({}) {} to ops manager...".format(ver, filename),
