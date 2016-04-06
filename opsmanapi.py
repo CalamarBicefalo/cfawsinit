@@ -311,17 +311,22 @@ class OpsManApi(object):
         auth[bosh_cfg['target']] = target_auth
         bosh_cfg['auth'] = auth
         """
-    def bosh(self, cmd, out=None):
+    def bosh(self, cmd, out=None, ignore_error=None):
         if not self._login:
             self.boshlogin()
 
         boshcmd = (
             self.boshprefix +
             cmd)
-        self.execute_on_opsman(
-            self.opts,
-            boshcmd,
-            out)
+        try:
+            self.execute_on_opsman(
+                self.opts,
+                boshcmd,
+                out)
+        except Exception as ex:
+            if ignore_error is not None and ignore_error\
+                    not in str(ex.stderr):
+                raise
 
     def execute_on_opsman(self, opts, cmd, out=None):
         host = urlparse.urlparse(self.url).netloc
@@ -333,7 +338,7 @@ class OpsManApi(object):
         out = out or outfn
         try:
             ssh("-oStrictHostKeyChecking=no",
-                "-i {} ".format(
+                "-i{} ".format(
                     os.path.expanduser(opts['ssh_private_key_path'])),
                 "ubuntu@"+host,
                 cmd,
@@ -796,8 +801,7 @@ class OpsManApi17(OpsManApi):
         # This can be done by unzip  cf-1.7.0-build.167.pivotal metadata/cf.yml
         # and reading from post_deploy_errands key in that yml
         enabled_errands =\
-            ['smoke-tests', 'notifications',
-             # ['smoke-tests', 'push-apps-manager', 'notifications',
+            ['smoke-tests', 'push-apps-manager', 'notifications',
              'notifications-ui', 'autoscaling', 'autoscaling-register-broker']
         post_args =\
             [("enabled_errands[{}][post_deploy_errands][]".

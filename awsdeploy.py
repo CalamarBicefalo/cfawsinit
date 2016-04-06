@@ -233,7 +233,7 @@ def deploy(prepared_file, timeout=300):
     ops.bosh("status")
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
-    ops.bosh("vms")
+    ops.bosh("vms", ignore_error='No deployments')
     ops.wait_for_deployed('cf', timeout=timeout)
     ops.wait_while_install_running(timeout=timeout)
 
