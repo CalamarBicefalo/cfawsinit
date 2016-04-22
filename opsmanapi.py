@@ -59,6 +59,8 @@ class OpsManApi(object):
         self.action_map_file = THIS_DIR+'/opsman_mappings.yml'
         self.opts = opts
         self._login = False
+        if 'PcfKeyPairName' not in self.var:
+            self.var['PcfKeyPairName'] = self.opts['ssh_key_name']
 
     def setup(self):
         setup_data = {'setup[eula_accepted]': 'true',

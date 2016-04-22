@@ -29,6 +29,11 @@ def get_stack_outputvars(stack, ec2):
     ops['PcfVmsSecurityGroupName'] = list(
         ec2.security_groups.filter(
             GroupIds=[ops['PcfVmsSecurityGroupId']]))[0].group_name
+
+    if 'PcfVpc' in ops:
+        vpc = ec2.Vpc(ops['PcfVpc'])
+        ops['PcfPrivateSubnetAvailabilityZone'] = list(vpc.subnets.filter(
+            SubnetIds=[ops['PcfPrivateSubnetId']]))[0].availability_zone
     return ops
 
 
@@ -98,8 +103,9 @@ def launch_ops_manager(opts, stack_vars, ec2):
                  {'Name': 'tag:stack-name', 'Values': [opts['stack-name']]},
                  {'Name': 'instance-state-name', 'Values': ['running']}]))
     if len(insts) == 1:
+        print insts
         print "Found running ops manager {} {}".format(
-            insts[0].id, insts[0].public_dns_name)
+            insts[0].id, get_addr(insts[0]))
         return insts[0]
     elif len(insts) > 1:
         raise Exception("Several Ops Managers running {} for stack {}".format(
@@ -132,13 +138,13 @@ def launch_ops_manager(opts, stack_vars, ec2):
     sys.stdout.flush()
     inst.wait_until_running()
     inst.reload()
-    print inst.public_dns_name
+    print get_addr(inst)
     return inst
 
 
 def configure_ops_manager(opts, stack_vars, inst):
     ops = opsmanapi.get(
-        "https://"+inst.public_dns_name,
+        "https://"+get_addr(inst),
         opts['opsman-username'],
         opts['opsman-password'],
         os.path.expanduser(opts['ssh_private_key_path']),
@@ -165,14 +171,23 @@ def wait_for_stack_ready(st, timeout):
         st.name, st.stack_status))
 
 
+def get_addr(inst):
+    addr = inst.public_dns_name
+    addr = addr or inst.public_ip_address
+    return addr
+
+
 def wait_for_opsman_ready(inst, timeout):
+    addr = get_addr(inst)
+
     def should_wait():
         try:
             resp = requests.head(
-                "https://{}/".format(inst.public_dns_name),
+                "https://{}/".format(addr),
                 verify=False, timeout=1)
             return resp.status_code >= 400
         except requests.exceptions.RequestException as ex:
+            print ex
             pass
         except requests.HTTPError as ex:
             print ex
