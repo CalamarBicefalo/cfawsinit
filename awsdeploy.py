@@ -187,7 +187,6 @@ def wait_for_opsman_ready(inst, timeout):
                 verify=False, timeout=1)
             return resp.status_code >= 400
         except requests.exceptions.RequestException as ex:
-            print ex
             pass
         except requests.HTTPError as ex:
             print ex
@@ -231,13 +230,13 @@ def deploy(prepared_file, timeout=300):
     ops_manager_inst = launch_ops_manager(opts, stack_vars, ec2)
     # ensure that ops manager is ready to receive requests
     wait_for_opsman_ready(ops_manager_inst, timeout)
-    ops = configure_ops_manager(opts, stack_vars, ops_manager_inst)
-    ops.create_ert_databases(opts)
     dnsmapping.map_ert_domain(
         stackname=opts['stack-name'],
         domain=opts['domain'],
         route53=route53,
         elb=elb)
+    ops = configure_ops_manager(opts, stack_vars, ops_manager_inst)
+    ops.create_ert_databases(opts)
     print "Ops manager is now available at ", ops.url
 
     if not hasattr(ops, 'install_elastic_runtime'):
