@@ -381,7 +381,6 @@ class OpsManApi(object):
 
     def create_ert_databases(self, opts):
         file_name = 'create_dbs.ddl'
-        self.copy_to_opsman(opts, THIS_DIR+"/"+file_name, file_name)
         CMD = (
             'mysql --host={PcfRdsAddress} '
             '--user={PcfRdsUsername} '
@@ -391,6 +390,8 @@ class OpsManApi(object):
             file_name=file_name,
             **self.var)
 
+        print cmd
+        self.copy_to_opsman(opts, THIS_DIR+"/"+file_name, file_name)
         self.execute_on_opsman(opts, cmd)
 
 
