@@ -6,12 +6,14 @@ import urlparse
 import requests
 import requests.auth
 import os
+import time
 from StringIO import StringIO
 import copy
 import sys
 import stemplate
 import tempfile
 import wait_util
+import paramiko
 
 import pivnet
 
@@ -61,6 +63,7 @@ class OpsManApi(object):
         self._login = False
         if 'PcfKeyPairName' not in self.var:
             self.var['PcfKeyPairName'] = self.opts['ssh_key_name']
+        self._sshclient = None
 
     def setup(self):
         setup_data = {'setup[eula_accepted]': 'true',
@@ -331,53 +334,34 @@ class OpsManApi(object):
                 raise
 
     def execute_on_opsman(self, opts, cmd, out=None):
-        host = urlparse.urlparse(self.url).netloc
-        from sh import ssh
+        stdin, stdout, stderr = self.sshclient.exec_command(cmd)
+        while stdout.channel.exit_status_ready() is False:
+            time.sleep(3)
 
-        def outfn(line):
-            print line,
+        if stdout.channel.exit_status != 0:
+            raise Exception(cmd + " failed "+stdout.read() + stderr.read())
 
-        out = out or outfn
-        try:
-            ssh("-oStrictHostKeyChecking=no",
-                "-i{} ".format(
-                    os.path.expanduser(opts['ssh_private_key_path'])),
-                "ubuntu@"+host,
-                cmd,
-                _out=out)
-        except Exception as ex:
-            print "Error running", cmd
-            print ex.stdout
-            print ex.stderr
-            raise
+    @property
+    def sshclient(self):
+        if self._sshclient is None:
+            host = urlparse.urlparse(self.url).netloc
+            clnt = paramiko.SSHClient()
+            clnt.set_missing_host_key_policy(paramiko.WarningPolicy())
+            clnt.connect(
+                host, username="ubuntu",
+                key_filename=self.opts['ssh_private_key_path'])
+            self._sshclient = clnt
 
-    def copy_to_opsman(self, opts, source, target=""):
-        host = urlparse.urlparse(self.url).netloc
-        from sh import scp
-        try:
-            scp("-oStrictHostKeyChecking=no",
-                "-i {} ".format(opts['ssh_private_key_path']),
-                source,
-                "ubuntu@"+host+":"+target)
-        except Exception as ex:
-            print "Error copying", source, target
-            print ex.stdout
-            print ex.stderr
-            raise
+        return self._sshclient
 
-    def copy_from_opsman(self, opts, source, target=""):
-        host = urlparse.urlparse(self.url).netloc
-        from sh import scp
-        try:
-            scp("-oStrictHostKeyChecking=no",
-                "-i {} ".format(opts['ssh_private_key_path']),
-                "ubuntu@"+host+":"+source,
-                target)
-        except Exception as ex:
-            print "Error copying", source, target
-            print ex.stdout
-            print ex.stderr
-            raise
+    def copy_to_opsman(self, opts, source, target=None):
+        scp = self.sshclient.open_sftp()
+        target = target or os.path.basename(source)
+        scp.put(source, target)
+
+    def copy_from_opsman(self, opts, source, target):
+        scp = self.sshclient.open_sftp()
+        scp.get(source, target)
 
     def create_ert_databases(self, opts):
         file_name = 'create_dbs.ddl'
