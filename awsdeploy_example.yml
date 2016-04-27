@@ -1,16 +1,16 @@
 ---
 region: us-east-1
-email: mjog@gmail.com
+email: mjog@pivotal.io
 ssh_private_key_path: ~/.ssh/id_rsa
 ssh_key_name: mjog
 domain: "{ssh_key_name}{uid}.pcf-practice.com"
-PIVNET_TOKEN: iaaaabbbbcdd-FFX
+PIVNET_TOKEN: h6vTzpeCotwXFi
 ops-manager:
-    version: 1.6.11.0
-    beta-ok: false
+    version: "1.7"
+    beta-ok: true
 elastic-runtime:
-    version: latest
-    beta-ok: false
+    version: "1.7"
+    beta-ok: true
 # If you have a real cert, put it here
 # otherwise this is a self signed cert
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/mjogCertificate
