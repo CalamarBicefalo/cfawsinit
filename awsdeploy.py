@@ -291,6 +291,10 @@ def resolve_versions(token, opsman, ert, ec2):
                           if f['aws_object_key'].endswith(
                               "cloudformation.json")),
                           None)
+    if cloudformation is None:
+        cloudformation = next((f for f in files
+                              if 'CloudFormation' in f['name']),
+                              None)
     if cloudformation is not None:
         filename, dn = piv.download(
             elastic_runtime_ver, cloudformation, quiet=True)
