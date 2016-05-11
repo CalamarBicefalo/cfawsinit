@@ -236,6 +236,7 @@ def deploy(prepared_file, timeout=300):
         route53=route53,
         elb=elb)
     ops = configure_ops_manager(opts, stack_vars, ops_manager_inst)
+    import pdb; pdb.set_trace()
     ops.create_ert_databases(opts)
     print "Ops manager is now available at ", ops.url
 
@@ -244,10 +245,10 @@ def deploy(prepared_file, timeout=300):
         return 0
 
     ops.wait_for_deployed('p-bosh', timeout=timeout)
-    ops.bosh("status")
+    print ops.bosh("status")
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
-    ops.bosh("vms", ignore_error='No deployments')
+    print ops.bosh("vms", ignore_error='No deployments')
     ops.wait_for_deployed('cf', timeout=timeout)
     ops.wait_while_install_running(timeout=timeout)
 

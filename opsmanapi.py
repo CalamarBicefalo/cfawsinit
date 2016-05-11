@@ -47,6 +47,9 @@ class OpsManApi(object):
         self.password = password
         self.auth = requests.auth.HTTPBasicAuth(username, password)
         self.private_key = open(private_key_file, "rt").read()
+        if not self.private_key.endswith('\r\n\r\n'):
+            self.private_key += '\r\n'
+
         self.self_signed_key = open(
             THIS_DIR+"/Selfsigned/my-private-key.pem", "rt").read()
         self.self_signed_cert = open(
@@ -324,22 +327,30 @@ class OpsManApi(object):
             self.boshprefix +
             cmd)
         try:
-            self.execute_on_opsman(
+            return self.execute_on_opsman(
                 self.opts,
                 boshcmd,
                 out)
         except Exception as ex:
             if ignore_error is not None and ignore_error\
-                    not in str(ex.stderr):
+                    not in str(ex):
                 raise
 
     def execute_on_opsman(self, opts, cmd, out=None):
         stdin, stdout, stderr = self.sshclient.exec_command(cmd)
+        sout = ""
+        serr = ""
         while stdout.channel.exit_status_ready() is False:
             time.sleep(3)
+            sout += stdout.read()
+            print sout
+            serr += stderr.read()
+            print serr
 
         if stdout.channel.exit_status != 0:
-            raise Exception(cmd + " failed "+stdout.read() + stderr.read())
+            raise Exception(cmd + " failed "+sout + serr)
+
+        return sout, serr
 
     @property
     def sshclient(self):
@@ -635,7 +646,7 @@ class OpsManApi17(OpsManApi):
         if '_NO_CACHE_' not in os.environ:
             CMD += '[[ -e {filename} ]] || '
         CMD += (
-            'wget -O {filename} --post-data="" '
+            'wget -q -O {filename} --post-data="" '
             '--header="Authorization: Token {token}" {url}')
 
         cmd = CMD.format(
@@ -650,7 +661,7 @@ class OpsManApi17(OpsManApi):
     def _add_ert_to_opsman(self, opts, ert_file):
         # TODO ensure that ops manager is ready to install ert
         CMD = (
-            'curl -v -k https://localhost/api/v0/available_products '
+            'curl -s -k https://localhost/api/v0/available_products '
             '-F \'product[file]=@{filename}\' '
             '-X POST '
             '-H "Authorization: {auth}"')
