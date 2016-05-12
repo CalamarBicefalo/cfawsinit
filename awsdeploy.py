@@ -233,6 +233,11 @@ def deploy(prepared_file, timeout=300):
     ops_manager_inst = launch_ops_manager(opts, stack_vars, ec2)
     # ensure that ops manager is ready to receive requests
     wait_for_opsman_ready(ops_manager_inst, timeout)
+    if 'apps_domain' not in opts:
+        opts['apps_domain'] = "apps." + opts["domain"]
+    if 'system_domain' not in opts:
+        opts['system_domain'] = "system." + opts["domain"]
+
     dnsmapping.map_ert_domain(
         stackname=opts['stack-name'],
         domain=opts['domain'],
@@ -391,6 +396,9 @@ def prepare_deploy(infilename, outfilename):
     set_if_empty('opsman-username', 'admin')
     set_if_empty('opsman-password', 'keepitsimple')
     set_if_empty('_START_INSTALLS_', True)
+
+    set_if_empty('apps_domain', "apps." + outfile["domain"])
+    set_if_empty('system_domain', "system." + outfile["domain"])
 
     yamlout = open(outfilename, 'wt')\
         if outfilename is not None \

@@ -11,7 +11,15 @@ products:
   - identifier: allow_cross_container_traffic
     value: true
   - identifier: networking_point_of_entry
-    value: external_non_ssl
+    options:
+    - identifier: external_ssl
+      properties:
+      - identifier: ssl_rsa_certificate
+        value:
+          cert_pem: (( v.self_signed_cert ))
+          private_key_pem: (( v.self_signed_key ))
+      - identifier: ssl_ciphers
+    value: external_ssl
   - identifier: system_database
     options:
     - identifier: external
@@ -50,9 +58,9 @@ products:
   - identifier: cloud_controller
     properties:
     - identifier: system_domain
-      value: system.(( Opts_domain ))
+      value: (( Opts_system_domain ))
     - identifier: apps_domain
-      value: apps.(( Opts_domain ))
+      value: (( Opts_apps_domain ))
   - identifier: ha_proxy
     instance:
       identifier: instances
