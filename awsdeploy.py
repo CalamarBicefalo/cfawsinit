@@ -76,6 +76,8 @@ def create_stack(opts, ec2, cff, timeout=300):
             "07SSLCertificateARN": opts['ssl_cert_arn']}
     if 'opsman-template-url' in opts:
         args['08OpsManagerTemplate'] = opts['opsman-template-url']
+    if 'template-params' in opts['elastic-runtime']:
+        args.update(opts['elastic-runtime']['template-params'])
 
     # filter out args that are not needed
     args = {k: v for k, v in args.items() if k in templ["Parameters"]}
