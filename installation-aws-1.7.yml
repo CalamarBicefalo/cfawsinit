@@ -81,7 +81,6 @@ products:
       identifier: registry_credentials
     - value:
         identity: director
-        password: director-password
       identifier: director_credentials
     - value:
         identity: nats
