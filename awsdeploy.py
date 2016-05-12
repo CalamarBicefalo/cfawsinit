@@ -142,7 +142,7 @@ def launch_ops_manager(opts, stack_vars, ec2):
     return inst
 
 
-def configure_ops_manager(opts, stack_vars, inst):
+def configure_ops_manager(opts, stack_vars, inst, vpc):
     ops = opsmanapi.get(
         "https://"+get_addr(inst),
         opts['opsman-username'],
@@ -150,7 +150,8 @@ def configure_ops_manager(opts, stack_vars, inst):
         os.path.expanduser(opts['ssh_private_key_path']),
         stack_vars,
         opts['region'],
-        opts=opts)
+        opts=opts,
+        vpc=vpc)
 
     ops.setup()
     ops.login()
@@ -235,8 +236,8 @@ def deploy(prepared_file, timeout=300):
         domain=opts['domain'],
         route53=route53,
         elb=elb)
-    ops = configure_ops_manager(opts, stack_vars, ops_manager_inst)
-    import pdb; pdb.set_trace()
+    vpc = ec2.Vpc(stack_vars['PcfVpc'])
+    ops = configure_ops_manager(opts, stack_vars, ops_manager_inst, vpc)
     ops.create_ert_databases(opts)
     print "Ops manager is now available at ", ops.url
 

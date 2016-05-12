@@ -41,7 +41,7 @@ def get(*args, **kwargs):
 
 class OpsManApi(object):
     def __init__(self, url, username, password, private_key_file,
-                 stack_vars, region, opts):
+                 stack_vars, region, opts, vpc):
         self.url = url
         self.username = username
         self.password = password
@@ -67,6 +67,7 @@ class OpsManApi(object):
         if 'PcfKeyPairName' not in self.var:
             self.var['PcfKeyPairName'] = self.opts['ssh_key_name']
         self._sshclient = None
+        self.vpc = vpc
 
     def setup(self):
         setup_data = {'setup[eula_accepted]': 'true',
@@ -547,10 +548,57 @@ class OpsManApi17(OpsManApi):
         yamlfile = buf.getvalue()
         return yamlfile, yobj
 
+    def get_ip_insubnet(self, cidr, num=1):
+        ipr, _, mask = cidr.partition('/')
+        vs = map(int, ipr.split('.'))
+        addr = 0
+        for idx, val in enumerate(vs[::-1]):
+            addr += val << (8*idx)
+        v2 = []
+        addr += num  # make into gateway
+        while addr > 0:
+            v2.append(str(addr % 256))
+            addr = addr >> 8
+
+        return '.'.join(v2[::-1])
+
+    def update_subnet(self, yobj, subnet_id):
+        subnet = list(self.vpc.subnets.filter(
+            SubnetIds=[subnet_id]))[0]
+        subnet_gw = self.get_ip_insubnet(subnet.cidr_block)
+        res_hosts = int(
+            self.opts.get(
+                "reserved_hosts",
+                "9"))
+        subnet_reserved = "{}-{}".format(
+            subnet_gw, self.get_ip_insubnet(subnet.cidr_block, res_hosts))
+
+        dns = self.opts.get(
+            'dns', self.get_ip_insubnet(self.vpc.cidr_block, 2))
+
+        sb = stemplate.Cfg(
+            yobj['infrastructure']['networks'][0], idfield='iaas_identifier')
+        subnetobj = sb['subnets'][subnet.id].obj
+        subnetobj['dns'] = dns
+        subnetobj['cidr'] = subnet.cidr_block
+        subnetobj['gateway'] = subnet_gw
+        subnetobj['reserved_ip_ranges'] = subnet_reserved
+
+    def update_boshnetworkinfo(self, yobj):
+        self.update_subnet(yobj, self.var["PcfPrivateSubnetId"])
+        self.update_subnet(yobj, self.var["PcfPrivateSubnet2Id"])
+
     def configure(self, filename=None, action=None, force=False):
-        force = force or 'FORCE_PREPARE' in os.environ
+        force = force or '_FORCE_PREPARE_' in os.environ
         if force or not self.is_prepared():
-            yamlfile, _ = self.resolve_yml(filename=filename)
+            _, yobj = self.resolve_yml(filename=filename)
+            self.update_boshnetworkinfo(yobj)
+            # update network configuration
+            buf = StringIO()
+            yaml.safe_dump(
+                yobj, buf, indent=2, default_flow_style=False)
+            yamlfile = buf.getvalue()
+
             files = {'installation[file]':
                      ('installation-integration-minimal.yml',
                          yamlfile, 'text/yaml')}
