@@ -342,15 +342,16 @@ class OpsManApi(object):
         sout = ""
         serr = ""
         while stdout.channel.exit_status_ready() is False:
-            time.sleep(3)
-            sout += stdout.read()
-            print sout
+            time.sleep(2)
+            _sout = stdout.read()
+            print _sout
+            sout += _sout
             serr += stderr.read()
-            print serr
 
         if stdout.channel.exit_status != 0:
             raise Exception(cmd + " failed "+sout + serr)
 
+        print serr
         return sout, serr
 
     @property
@@ -614,6 +615,12 @@ class OpsManApi17(OpsManApi):
         if self.is_deployed('p-bosh'):
             return self
 
+        if self.opts.get("_START_INSTALLS_", True) is False and\
+                self.is_install_running() is False:
+            raise Exception("Not Starting install per _START_INSTALLS_ flag\n"
+                            "Verify that the configuration is correct and "
+                            "manually start install")
+
         print "Starting Ops Manager Director install...",
         sys.stdout.flush()
         self.apply_changes(in_progress_ok=True)
@@ -755,6 +762,14 @@ class OpsManApi17(OpsManApi):
         waitFor(timeout)
         print "done"
 
+    def is_install_running(self):
+        instno = self.find_lastest_install()
+
+        if instno == -1:
+            return False
+        respjson = self.getJSON("/api/v0/installations/{}".format(instno))
+        return respjson.get("status", "success") == "running"
+
     def find_lastest_install(self):
         instno = -1
         respjson = self.getJSON("/api/v0/installations")
@@ -855,5 +870,12 @@ class OpsManApi17(OpsManApi):
         self.postJSON(
             "/api/installation_settings",
             files=files)
+
+        if self.opts.get("_START_INSTALLS_", True) is False and\
+                self.is_install_running() is False:
+            raise Exception("Not Starting install per _START_INSTALLS_ flag\n"
+                            "Verify that the configuration is correct and "
+                            "manually start install")
+
         self.apply_changes(post_args=post_args)
         return self

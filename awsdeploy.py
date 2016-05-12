@@ -248,10 +248,10 @@ def deploy(prepared_file, timeout=300):
         return 0
 
     ops.wait_for_deployed('p-bosh', timeout=timeout)
-    print ops.bosh("status")
+    ops.bosh("status")
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
-    print ops.bosh("vms", ignore_error='No deployments')
+    ops.bosh("vms", ignore_error='No deployments')
     ops.wait_for_deployed('cf', timeout=timeout)
     ops.wait_while_install_running(timeout=timeout)
 
@@ -390,6 +390,7 @@ def prepare_deploy(infilename, outfilename):
     set_if_empty('rds-password', 'keepitsimple')
     set_if_empty('opsman-username', 'admin')
     set_if_empty('opsman-password', 'keepitsimple')
+    set_if_empty('_START_INSTALLS_', True)
 
     yamlout = open(outfilename, 'wt')\
         if outfilename is not None \
