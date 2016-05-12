@@ -16,8 +16,8 @@ products:
       properties:
       - identifier: ssl_rsa_certificate
         value:
-          cert_pem: (( v.self_signed_cert ))
-          private_key_pem: (( v.self_signed_key ))
+          cert_pem: (( v.ssl_cert ))
+          private_key_pem: (( v.ssl_key ))
       - identifier: ssl_ciphers
     value: external_ssl
   - identifier: system_database
@@ -68,8 +68,8 @@ products:
     properties:
     - identifier: ssl_rsa_certificate
       value:
-        cert_pem: (( v.self_signed_cert ))
-        private_key_pem: (( v.self_signed_key ))
+        cert_pem: (( v.ssl_cert ))
+        private_key_pem: (( v.ssl_key ))
     - identifier: skip_cert_verify
       value: false
     - identifier: ssl_ciphers

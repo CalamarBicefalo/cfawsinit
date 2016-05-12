@@ -54,6 +54,17 @@ class OpsManApi(object):
             THIS_DIR+"/Selfsigned/my-private-key.pem", "rt").read()
         self.self_signed_cert = open(
             THIS_DIR+"/Selfsigned/my-certificate.pem", "rt").read()
+
+        if 'ssl_cert_file' in opts:
+            self.ssl_cert = open(opts['ssl_cert_file'], "rt").read()
+        else:
+            self.ssl_cert = self.self_signed_cert
+
+        if 'ssl_key_file' in opts:
+            self.ssl_key = open(opts['ssl_key_file'], "rt").read()
+        else:
+            self.ssl_key = self.self_signed_key
+
         self.browser = RoboBrowser(history=True)
         self.var = stack_vars
         self.region = region
