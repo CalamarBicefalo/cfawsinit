@@ -63,7 +63,7 @@ products:
         cert_pem: (( v.self_signed_cert ))
         private_key_pem: (( v.self_signed_key ))
     - identifier: skip_cert_verify
-      value: true
+      value: false
     - identifier: ssl_ciphers
   - identifier: router
     elb_names: (( Opts_stack-name ))-pcf-elb
@@ -93,7 +93,3 @@ products:
     instance:
       identifier: instances
       value: 0
-  - identifier: compilation
-    instance:
-      identifier: instances
-      value: 8
