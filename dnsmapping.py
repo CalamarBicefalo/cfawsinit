@@ -2,7 +2,7 @@ import boto3
 
 
 def map_ert_domain(stackname, domain, lbname=None,
-                   route53=None, elb=None):
+                   route53=None, elb=None, names=None):
     """
     maps *.domain, *.system.domain, *.apps.domain
     to stackname-pcf-elb load balancer
@@ -10,7 +10,7 @@ def map_ert_domain(stackname, domain, lbname=None,
     route53 = route53 or boto3.client('route53')
     elb = elb or boto3.client('elb')
     prefixes = ["", "*.", "*.system.", "*.apps."]
-    names = [prefix + domain for prefix in prefixes]
+    names = names or [prefix + domain for prefix in prefixes]
 
     if not domain.endswith('.'):
         domain += '.'

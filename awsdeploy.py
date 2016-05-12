@@ -233,16 +233,22 @@ def deploy(prepared_file, timeout=300):
     ops_manager_inst = launch_ops_manager(opts, stack_vars, ec2)
     # ensure that ops manager is ready to receive requests
     wait_for_opsman_ready(ops_manager_inst, timeout)
+    names = []
     if 'apps_domain' not in opts:
         opts['apps_domain'] = "apps." + opts["domain"]
+    else:
+        names.append("*."+opts['apps_domain'])
     if 'system_domain' not in opts:
         opts['system_domain'] = "system." + opts["domain"]
+    else:
+        names.append("*."+opts['system_domain'])
 
     dnsmapping.map_ert_domain(
         stackname=opts['stack-name'],
         domain=opts['domain'],
         route53=route53,
-        elb=elb)
+        elb=elb,
+        names=names)
     vpc = ec2.Vpc(stack_vars['PcfVpc'])
     ops = configure_ops_manager(opts, stack_vars, ops_manager_inst, vpc)
     ops.create_ert_databases(opts)
