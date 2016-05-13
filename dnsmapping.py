@@ -34,6 +34,9 @@ def map_ert_domain(stackname, domain, lbname=None,
         print "Manually map {} <-- {}".format(dnsname, names)
         return
 
+    # ensure names are unique
+    names = set(names)
+
     changes = [
         {
             'Action': 'UPSERT',
