@@ -389,16 +389,19 @@ class OpsManApi(object):
 
     def create_ert_databases(self, opts):
         file_name = 'create_dbs.ddl'
-        CMD = (
-            'mysql --host={PcfRdsAddress} '
-            '--user={PcfRdsUsername} '
-            '--password={PcfRdsPassword} '
-            '< {file_name}')
-        cmd = CMD.format(
-            file_name=file_name,
-            **self.var)
+        cmd = 'mysql < {file_name}'.format(file_name=file_name)
+        MY_CNF = (
+            '[client]\n'
+            'host={PcfRdsAddress}\n'
+            'user={PcfRdsUsername}\n'
+            'password={PcfRdsPassword}\n\n'
+        ).format(**self.var)
 
-        print cmd
+        _, my_cnf_path = tempfile.mkstemp()
+        with open(my_cnf_path, "wt") as _fll:
+            _fll.write(MY_CNF)
+
+        self.copy_to_opsman(opts, my_cnf_path, ".my.cnf")
         self.copy_to_opsman(opts, THIS_DIR+"/"+file_name, file_name)
         self.execute_on_opsman(opts, cmd)
 
