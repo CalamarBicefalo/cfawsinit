@@ -75,6 +75,9 @@ products:
     - identifier: ssl_ciphers
   - identifier: router
     elb_names: (( Opts_stack-name ))-pcf-elb
+    instance:
+      identifier: instances
+      value: 2
   - identifier: diego_brain
     elb_names: (( Opts_stack-name ))-pcf-ssh-elb
   - identifier: nfs_server
