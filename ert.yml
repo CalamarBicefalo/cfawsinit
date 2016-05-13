@@ -71,7 +71,7 @@ products:
         cert_pem: (( v.ssl_cert ))
         private_key_pem: (( v.ssl_key ))
     - identifier: skip_cert_verify
-      value: false
+      value: (( Opts_skip_cert_verify ))
     - identifier: ssl_ciphers
   - identifier: router
     elb_names: (( Opts_stack-name ))-pcf-elb

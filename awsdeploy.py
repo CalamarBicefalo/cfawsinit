@@ -405,6 +405,7 @@ def prepare_deploy(infilename, outfilename):
 
     set_if_empty('apps_domain', "apps." + outfile["domain"])
     set_if_empty('system_domain', "system." + outfile["domain"])
+    set_if_empty('skip_cert_verify', False)
 
     yamlout = open(outfilename, 'wt')\
         if outfilename is not None \
