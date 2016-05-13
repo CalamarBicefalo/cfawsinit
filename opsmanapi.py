@@ -246,11 +246,12 @@ class OpsManApi(object):
         """
         ensure that bosh on opsmanager in logged in
         """
+        bosh_director = self.get_bosh_director()
         boshcmd = (
             self.boshprefix +
             '-n '
             '--ca-cert /var/tempest/workspaces/default/root_ca_certificate '
-            'target 10.0.16.10')
+            'target {}').format(bosh_director)
         self.execute_on_opsman(
             self.opts,
             boshcmd,
@@ -602,6 +603,16 @@ class OpsManApi17(OpsManApi):
     def update_boshnetworkinfo(self, yobj):
         self.update_subnet(yobj, self.var["PcfPrivateSubnetId"])
         self.update_subnet(yobj, self.var["PcfPrivateSubnet2Id"])
+
+    def get_bosh_director(self):
+        subnet = list(self.vpc.subnets.filter(
+            SubnetIds=[self.var["PcfPrivateSubnetId"]]))[0]
+        res_hosts = int(
+            self.opts.get(
+                "reserved_hosts",
+                "9"))
+        # bosh director is the 1st ip after the reserved block
+        return self.get_ip_insubnet(subnet.cidr_block, res_hosts+1)
 
     def configure(self, filename=None, action=None, force=False):
         force = force or '_FORCE_PREPARE_' in os.environ
