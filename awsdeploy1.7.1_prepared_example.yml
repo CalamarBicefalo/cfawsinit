@@ -31,6 +31,8 @@ ssh_private_key_path: /Users/mjog/.ssh/piv-ec2-mjog.pem
 ssl_cert_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
 ssl_key_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/mjogCertificate
+# Set the following to true if cert_arn is self signed
+skip_cert_verify: true
 stack-name: mjog-pcf-0f64e4
 uid: 0f64e4
 _START_INSTALLS_: false
