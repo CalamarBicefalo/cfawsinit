@@ -70,8 +70,6 @@ products:
     installation_name: director
     vm_credentials:
       identity: vcap1
-      password: f00c5f0745c8fe66
-      salt: vm-salt-12345687
     properties:
     - value:
         identity: vcap
