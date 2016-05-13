@@ -33,6 +33,10 @@ ssl_key_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/mjogCertificate
 # Set the following to true if cert_arn is self signed
 skip_cert_verify: true
+ipsec_instance_certificate: /path/to/instance_cert.pem
+ipsec_instance_private_key: /path/to/instance_key.pem
+ipsec_ca_certificates:
+  - /path/to/ca_cert.pem
 stack-name: mjog-pcf-0f64e4
 uid: 0f64e4
 _START_INSTALLS_: false
