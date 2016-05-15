@@ -45,6 +45,25 @@ infrastructure:
         reserved_ip_ranges: 10.0.32.1-10.0.32.9
         availability_zone_references:
         - az-(( PcfPrivateSubnet2AvailabilityZone ))
+      - guid: subnet-(( PcfPrivateSubnet3Id ))
+        iaas_identifier: (( PcfPrivateSubnet3Id ))
+        cidr: 10.0.64.0/20
+        dns: 10.0.0.2
+        gateway: 10.0.64.1
+        reserved_ip_ranges: 10.0.64.1-10.0.64.9
+        availability_zone_references:
+        - az-(( PcfPrivateSubnet3AvailabilityZone ))
+  - guid: network-(( PcfInfrastructureSubnetId ))
+    name: infrastructure
+    subnets:
+      - guid: subnet-(( PcfInfrastructureSubnetId ))
+        iaas_identifier: (( PcfInfrastructureSubnetId ))
+        cidr: 10.0.0.0/24
+        dns: 10.0.0.2
+        gateway: 10.0.0.1
+        reserved_ip_ranges: 10.0.0.1-10.0.0.9
+        availability_zone_references:
+        - az-(( PcfInfrastructureSubnetAvailabilityZone ))        
   iaas_configuration:
     region: (( v.region ))
     access_key_id: (( PcfIamUserAccessKey ))
@@ -59,6 +78,8 @@ infrastructure:
     iaas_identifier:  (( PcfPrivateSubnetAvailabilityZone ))
   - guid: az-(( PcfPrivateSubnet2AvailabilityZone ))
     iaas_identifier:  (( PcfPrivateSubnet2AvailabilityZone ))
+  - guid: az-(( PcfPrivateSubnet3AvailabilityZone ))
+    iaas_identifier:  (( PcfPrivateSubnet3AvailabilityZone ))
 
 products:
 - guid: p-bosh-guid
@@ -110,7 +131,7 @@ products:
       identifier: cpu
     identifier: director
   identifier: p-bosh
-  network_reference: network-(( PcfPrivateSubnetId ))
+  network_reference: network-(( PcfInfrastructureSubnetId ))
   singleton_availability_zone_reference: az-(( PcfPrivateSubnetAvailabilityZone ))
   availability_zone_references:
   - az-(( PcfPrivateSubnetAvailabilityZone ))

@@ -1,0 +1,31 @@
+PIVNET_TOKEN: br441y-axwNYV_Kt18hT
+__PREPARED__: true
+date: 2016-05-11 15:56:34.506636
+domain: pcf.cf.shaozhenpcf.com
+elastic-runtime:
+  beta-ok: false
+  cloudformation-template: /Users/sding/work/source/cloudformation-template/pcf_1_7_cloudformation.json
+  cloudformation-template-url: https://network.pivotal.io/api/v2/products/elastic-runtime/releases/1730/product_files/4060/download
+  cloudformation-template-version: 1.7.1
+  image-build: 1.7.1-build.3
+  image-file-url: https://network.pivotal.io/api/v2/products/elastic-runtime/releases/1730/product_files/4542/download
+  image-filename: cf-1.7.1-build.3.pivotal
+  version: 1.7.1
+  template-params: {}
+email: sding@pivotal.io
+ops-manager:
+  ami-id: ami-c03bd6ad
+  ami-name: pivotal-ops-manager-v1.7.1.0
+  beta-ok: false
+  version: 1.7.1.0
+opsman-password: keepitsimple
+opsman-username: admin
+rds-password: boshbosh
+rds-username: bosh
+region: us-east-1
+ssh_key_name: pcf-sding
+ssh_private_key_path: /Users/sding/work/aws/personal/pcf-sding.pem
+ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/shaozhen-certificate
+stack-name: shaozhen
+uid: 0f64e4
+_START_INSTALLS_: false

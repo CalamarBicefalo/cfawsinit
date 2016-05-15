@@ -4,6 +4,7 @@ products:
   availability_zone_references:
   - az-(( PcfPrivateSubnetAvailabilityZone ))
   - az-(( PcfPrivateSubnet2AvailabilityZone ))
+  - az-(( PcfPrivateSubnet3AvailabilityZone ))
   singleton_availability_zone_reference: az-(( PcfPrivateSubnetAvailabilityZone ))
   properties:
   - identifier: logger_endpoint_port
