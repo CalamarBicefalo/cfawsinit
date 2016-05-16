@@ -63,7 +63,7 @@ infrastructure:
         gateway: 10.0.0.1
         reserved_ip_ranges: 10.0.0.1-10.0.0.9
         availability_zone_references:
-        - az-(( PcfInfrastructureSubnetAvailabilityZone ))        
+        - az-(( PcfInfrastructureSubnetAvailabilityZone ))
   iaas_configuration:
     region: (( v.region ))
     access_key_id: (( PcfIamUserAccessKey ))

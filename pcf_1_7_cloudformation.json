@@ -45,12 +45,12 @@
     },
     "13PublicSubnet": {
       "Type": "String",
-      "Default": "10.0.0.0/24",
+      "Default": "10.0.0.0/26",
       "Description": "Infrastructure Subnet CIDR"
     },
     "14InfrastructureSubnet": {
       "Type": "String",
-      "Default": "10.0.1.0/24",
+      "Default": "10.0.0.192/26",
       "Description": "Infrastructure Subnet CIDR"
     },
     "15PrivateSubnet1": {
@@ -77,6 +77,16 @@
       "Type": "String",
       "Default": "10.0.6.0/24",
       "Description": "Rds Subnet2"
+    },
+    "20PublicSubnet2": {
+      "Type": "String",
+      "Default": "10.0.0.64/26",
+      "Description": "Public Subnet2 CIDR"
+    },
+    "21PublicSubnet3": {
+      "Type": "String",
+      "Default": "10.0.0.128/26",
+      "Description": "Public Subnet3 CIDR"
     }
   },
   "Conditions": {
@@ -156,6 +166,48 @@
           {
             "Key": "Name",
             "Value": "pcf-public-subnet"
+          }
+        ]
+      }
+    },
+    "PcfPublicSubnet2": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            "1",
+            {"Fn::GetAZs": {"Ref": "AWS::Region"}}
+          ]
+        },
+        "CidrBlock": {"Ref": "20PublicSubnet2"},
+        "VpcId": {
+          "Ref": "PcfVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "pcf-public-subnet2"
+          }
+        ]
+      }
+    },
+    "PcfPublicSubnet3": {
+      "Type": "AWS::EC2::Subnet",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::Select": [
+            "2",
+            {"Fn::GetAZs": {"Ref": "AWS::Region"}}
+          ]
+        },
+        "CidrBlock": {"Ref": "21PublicSubnet3"},
+        "VpcId": {
+          "Ref": "PcfVpc"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "pcf-public-subnet3"
           }
         ]
       }
@@ -615,6 +667,28 @@
         }
       }
     },
+    "PcfPublicSubnet2RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PcfPublicRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PcfPublicSubnet2"
+        }
+      }
+    },
+    "PcfPublicSubnet3RouteTableAssociation": {
+      "Type": "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties": {
+        "RouteTableId": {
+          "Ref": "PcfPublicRouteTable"
+        },
+        "SubnetId": {
+          "Ref": "PcfPublicSubnet3"
+        }
+      }
+    },
     "PcfInfrastructureRouteTable": {
       "Type": "AWS::EC2::RouteTable",
       "Properties": {
@@ -858,7 +932,9 @@
           }
         ],
         "Subnets": [
-          {"Ref": "PcfPublicSubnet"}
+          {"Ref": "PcfPublicSubnet"},
+          {"Ref": "PcfPublicSubnet2"},
+          {"Ref": "PcfPublicSubnet3"}
         ]
       }
     },
@@ -918,7 +994,9 @@
           }
         ],
         "Subnets": [
-          {"Ref": "PcfPublicSubnet"}
+          {"Ref": "PcfPublicSubnet"},
+          {"Ref": "PcfPublicSubnet2"},
+          {"Ref": "PcfPublicSubnet3"}
         ]
       }
     },
@@ -993,7 +1071,9 @@
           }
         ],
         "Subnets": [
-          {"Ref": "PcfInfrastructureSubnet"}
+          {"Ref": "PcfPublicSubnet"},
+          {"Ref": "PcfPublicSubnet2"},
+          {"Ref": "PcfPublicSubnet3"}
         ]
       }
     },
@@ -1038,7 +1118,9 @@
           }
         ],
         "Subnets": [
-          {"Ref": "PcfInfrastructureSubnet"}
+          {"Ref": "PcfPublicSubnet"},
+          {"Ref": "PcfPublicSubnet2"},
+          {"Ref": "PcfPublicSubnet3"}
         ]
       }
     },
@@ -1252,8 +1334,20 @@
     "PcfPublicSubnetId": {
       "Value": {"Ref": "PcfPublicSubnet"}
     },
+    "PcfPublicSubnet2Id": {
+      "Value": {"Ref": "PcfPublicSubnet2"}
+    },
+    "PcfPublicSubnet3Id": {
+      "Value": {"Ref": "PcfPublicSubnet3"}
+    },
     "PcfPublicSubnetAvailabilityZone": {
       "Value": { "Fn::GetAtt" : [ "PcfPublicSubnet", "AvailabilityZone" ] }
+    },
+    "PcfPublicSubnet2AvailabilityZone": {
+      "Value": { "Fn::GetAtt" : [ "PcfPublicSubnet2", "AvailabilityZone" ] }
+    },
+    "PcfPublicSubnet3AvailabilityZone": {
+      "Value": { "Fn::GetAtt" : [ "PcfPublicSubnet3", "AvailabilityZone" ] }
     },
     "PcfInfrastructureSubnetId": {
       "Value": {"Ref": "PcfInfrastructureSubnet"}
