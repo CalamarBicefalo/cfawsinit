@@ -26,6 +26,7 @@ region: us-east-1
 ssh_key_name: pcf-sding
 ssh_private_key_path: /Users/sding/work/aws/personal/pcf-sding.pem
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/shaozhen-certificate
+skip_cert_verify: true
 stack-name: shaozhen
 uid: 0f64e4
 _START_INSTALLS_: false
