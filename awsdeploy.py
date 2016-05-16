@@ -264,11 +264,7 @@ def deploy(prepared_file, timeout=300):
 
     ops.wait_for_deployed('p-bosh', timeout=timeout)
     ops.bosh("status")
-    try:
-        ops.configure_ipsec()
-    except Exception as ex:
-        print ex
-        print "Unable to configure ipsec"
+    ops.configure_ipsec()
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
     ops.bosh("vms", ignore_error='No deployments')
