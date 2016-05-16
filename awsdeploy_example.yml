@@ -1,9 +1,10 @@
 ---
 region: us-east-1
 email: mjog@pivotal.io
-ssh_private_key_path: ~/.ssh/id_rsa
 ssh_key_name: mjog
 domain: "{ssh_key_name}{uid}.pcf-practice.com"
+apps_domain: "apps.{ssh_key_name}{uid}.pcf-practice.com"
+system_domain: "system.{ssh_key_name}{uid}.pcf-practice.com"
 PIVNET_TOKEN: h6vTzpeCotwXFi
 ops-manager:
     version: "1.7"
@@ -13,4 +14,21 @@ elastic-runtime:
     beta-ok: true
 # If you have a real cert, put it here
 # otherwise this is a self signed cert
+ssh_private_key_path: /Users/mjog/.ssh/piv-ec2-mjog.pem
+ssl_cert_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ssl_key_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/mjogCertificate
+skip_cert_verify: true
+
+# If all ipsec related keys are specified
+# Ip sec add on is deployed.
+# Download the release from pivnet and specify the file
+ipsec_instance_certificate: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ipsec_instance_private_key: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
+ipsec_ca_certificates:
+  - /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ipsec_release: ipsec-1.0.0.tgz
+
+# if this is false, the tool will configure ert / opsman
+# but will not "apply"
+_START_INSTALLS_: false
