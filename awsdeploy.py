@@ -224,12 +224,12 @@ def deploy(prepared_file, timeout=300):
     # ensure that stack is ready
     wait_for_stack_ready(stack, timeout)
     # 'arn:aws:cloudformation:us-east-1:375783000519:stack/mjog-pcf-42f062-OpsManStack-13R2QRZJCIPTB/ec4e3010-ef99-11e5-9206-500c28604c82'
-    opsman_stack_arn = next(
-        ll for ll in stack.resource_summaries.iterator()
-        if ll.logical_id == 'OpsManStack').physical_resource_id
-    opsman_stack = get_stack(opsman_stack_arn.split('/')[1], cff)
-    stack_vars = get_stack_outputvars(opsman_stack, ec2)
-    stack_vars.update(get_stack_outputvars(stack, ec2))
+    # opsman_stack_arn = next(
+    #     ll for ll in stack.resource_summaries.iterator()
+    #     if ll.logical_id == 'OpsManStack').physical_resource_id
+    # opsman_stack = get_stack(opsman_stack_arn.split('/')[1], cff)
+    stack_vars = get_stack_outputvars(stack, ec2)
+    # stack_vars.update(get_stack_outputvars(stack, ec2))
     ops_manager_inst = launch_ops_manager(opts, stack_vars, ec2)
     # ensure that ops manager is ready to receive requests
     wait_for_opsman_ready(ops_manager_inst, timeout)

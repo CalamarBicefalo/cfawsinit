@@ -1,1 +1,3 @@
 *.pyc
+installation_settings_post.yml
+installation_settings_pre.yml

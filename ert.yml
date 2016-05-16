@@ -4,7 +4,9 @@ products:
   availability_zone_references:
   - az-(( PcfPrivateSubnetAvailabilityZone ))
   - az-(( PcfPrivateSubnet2AvailabilityZone ))
+  - az-(( PcfPrivateSubnet3AvailabilityZone ))
   singleton_availability_zone_reference: az-(( PcfPrivateSubnetAvailabilityZone ))
+  network_reference: network-(( PcfPrivateSubnetId ))
   properties:
   - identifier: logger_endpoint_port
     value: 4443
@@ -74,12 +76,12 @@ products:
       value: (( Opts_skip_cert_verify ))
     - identifier: ssl_ciphers
   - identifier: router
-    elb_names: (( Opts_stack-name ))-pcf-elb
+    elb_names: (( Opts_stack-name ))-pcf-elb,(( Opts_stack-name ))-pcf-elb-in
     instance:
       identifier: instances
-      value: 2
+      value: 3
   - identifier: diego_brain
-    elb_names: (( Opts_stack-name ))-pcf-ssh-elb
+    elb_names: (( Opts_stack-name ))-pcf-ssh-elb,(( Opts_stack-name ))-pcf-ssh-elb-in
   - identifier: nfs_server
     instance:
       identifier: instances

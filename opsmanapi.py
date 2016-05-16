@@ -578,7 +578,7 @@ class OpsManApi17(OpsManApi):
 
         return '.'.join(v2[::-1])
 
-    def update_subnet(self, yobj, subnet_id):
+    def update_subnet(self, yobj, subnet_id, index):
         subnet = list(self.vpc.subnets.filter(
             SubnetIds=[subnet_id]))[0]
         subnet_gw = self.get_ip_insubnet(subnet.cidr_block)
@@ -593,7 +593,7 @@ class OpsManApi17(OpsManApi):
             'dns', self.get_ip_insubnet(self.vpc.cidr_block, 2))
 
         sb = stemplate.Cfg(
-            yobj['infrastructure']['networks'][0], idfield='iaas_identifier')
+            yobj['infrastructure']['networks'][index], idfield='iaas_identifier')
         subnetobj = sb['subnets'][subnet.id].obj
         subnetobj['dns'] = dns
         subnetobj['cidr'] = subnet.cidr_block
@@ -601,12 +601,16 @@ class OpsManApi17(OpsManApi):
         subnetobj['reserved_ip_ranges'] = subnet_reserved
 
     def update_boshnetworkinfo(self, yobj):
-        self.update_subnet(yobj, self.var["PcfPrivateSubnetId"])
-        self.update_subnet(yobj, self.var["PcfPrivateSubnet2Id"])
+        self.update_subnet(yobj, self.var["PcfPrivateSubnetId"], 0)
+        self.update_subnet(yobj, self.var["PcfPrivateSubnet2Id"], 0)
+        self.update_subnet(yobj, self.var["PcfPrivateSubnet3Id"], 0)
+
+    def update_infranetworkinfo(self, yobj):
+        self.update_subnet(yobj, self.var["PcfInfrastructureSubnetId"], 1)
 
     def get_bosh_director(self):
         subnet = list(self.vpc.subnets.filter(
-            SubnetIds=[self.var["PcfPrivateSubnetId"]]))[0]
+            SubnetIds=[self.var["PcfInfrastructureSubnetId"]]))[0]
         res_hosts = int(
             self.opts.get(
                 "reserved_hosts",
@@ -663,6 +667,7 @@ class OpsManApi17(OpsManApi):
         if force or not self.is_prepared():
             _, yobj = self.resolve_yml(filename=filename)
             self.update_boshnetworkinfo(yobj)
+            self.update_infranetworkinfo(yobj)
             # update network configuration
             buf = StringIO()
             yaml.safe_dump(
