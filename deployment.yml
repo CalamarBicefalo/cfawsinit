@@ -1,4 +1,4 @@
-PIVNET_TOKEN: 8nPkshy6rsrJsUNr1p-1
+PIVNET_TOKEN: 
 __PREPARED__: true
 date: 2016-05-11 15:56:34.506636
 domain: pcf.cf.shaozhenpcf.com
@@ -11,7 +11,17 @@ elastic-runtime:
   image-file-url: https://network.pivotal.io/api/v2/products/elastic-runtime/releases/1730/product_files/4542/download
   image-filename: cf-1.7.1-build.3.pivotal
   version: 1.7.1
-  template-params: {}
+  template-params:
+    12VpcCIDR: 10.91.144.0/21
+    13PublicSubnet: 10.91.144.0/28
+    20PublicSubnet2: 10.91.144.32/28
+    21PublicSubnet3: 10.91.144.64/28
+    14InfrastructureSubnet: 10.91.144.96/28
+    18RdsSubnet1: 10.91.144.128/28
+    19RdsSubnet2: 10.91.144.160/28
+    15PrivateSubnet1: 10.91.145.0/24
+    16PrivateSubnet2: 10.91.146.0/24
+    17PrivateSubnet3: 10.91.147.0/24
 email: sding@pivotal.io
 ops-manager:
   ami-id: ami-c03bd6ad
