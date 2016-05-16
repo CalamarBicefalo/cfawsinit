@@ -79,6 +79,7 @@ class OpsManApi(object):
             self.var['PcfKeyPairName'] = self.opts['ssh_key_name']
         self._sshclient = None
         self.vpc = vpc
+        self.director = None
 
     def setup(self):
         setup_data = {'setup[eula_accepted]': 'true',
@@ -609,20 +610,23 @@ class OpsManApi17(OpsManApi):
         self.update_subnet(yobj, self.var["PcfInfrastructureSubnetId"], 1)
 
     def get_bosh_director(self):
-        subnet = list(self.vpc.subnets.filter(
-            SubnetIds=[self.var["PcfInfrastructureSubnetId"]]))[0]
-        res_hosts = int(
-            self.opts.get(
-                "reserved_hosts",
-                "9"))
-        # bosh director is the 1st ip after the reserved block
-        return self.get_ip_insubnet(subnet.cidr_block, res_hosts+1)
+        if self.director is None:
+            current = self.getJSON("/api/installation_settings")
+            # {'director-guid': {'az-us-west-2b': ['10.0.16.10']}}
+            pbosh =\
+                next(v for k, v in
+                     current["ip_assignments"]["assignments"].items()
+                     if k.startswith('p-bosh'))
+
+            boship = pbosh.values()[0].values()[0]
+            self.director = boship[0]
+        return self.director
 
     def configure_ipsec(self):
         if 'ipsec_release' not in self.opts:
             print "Ipsec config skipped"
             return self
-        jx = yaml.load(open(THIS_DIR+"/ipsec-addon.yml"))
+        jx = yaml.load(open(THIS_DIR+"/ipsec-addon-template.yml"))
         ipsec = jx["addons"][0]["properties"]["ipsec"]
         ipsec["instance_certificate"] = open(
             self.opts["ipsec_instance_certificate"]).read()
