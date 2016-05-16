@@ -314,7 +314,7 @@ class OpsManApi(object):
                 out)
         except Exception as ex:
             if 'Non-interactive UAA login is not supported'\
-                    not in str(ex.stderr):
+                    not in str(ex):
                 raise
 
         self._login = True
@@ -613,6 +613,50 @@ class OpsManApi17(OpsManApi):
                 "9"))
         # bosh director is the 1st ip after the reserved block
         return self.get_ip_insubnet(subnet.cidr_block, res_hosts+1)
+
+    def configure_ipsec(self):
+        if 'ipsec_release' not in self.opts:
+            print "Ipsec config skipped"
+            return self
+        jx = yaml.load(open(THIS_DIR+"/ipsec-addon.yml"))
+        ipsec = jx["addons"][0]["properties"]["ipsec"]
+        ipsec["instance_certificate"] = open(
+            self.opts["ipsec_instance_certificate"]).read()
+        ipsec["instance_private_key"] = open(
+            self.opts["ipsec_instance_private_key"]).read()
+        ipsec["ca_certificates"] = [
+            open(fl).read()
+            for fl in self.opts["ipsec_ca_certificates"]]
+
+        current = self.getJSON("/api/installation_settings")
+        # {'director-guid': {'az-us-west-2b': ['10.0.16.10']}}
+        pbosh =\
+            next(v for k, v in
+                 current["ip_assignments"]["assignments"].items()
+                 if k.startswith('p-bosh'))
+
+        boship = pbosh.values()[0].values()[0]
+
+        # only 1 network in the installation
+        nw = current["infrastructure"]["networks"][0]
+        ipsec["ipsec_subnets"] = [s["cidr"] for s in nw["subnets"]]
+        no_ipsec_subnets = [s["gateway"] for s in nw["subnets"]] + boship
+        ipsec["no_ipsec_subnets"] = [s+"/32" for s in no_ipsec_subnets]
+
+        # write the addon file
+        outfilename = "ipsec-addon-prepared.yml"
+        outfile = open(outfilename, "wt")
+        yaml.safe_dump(
+            jx, outfile, indent=2, default_flow_style=False)
+
+        self.copy_to_opsman(self.opts, outfilename, outfilename)
+        self.copy_to_opsman(
+            self.opts,
+            self.opts["ipsec_release"],
+            "ipsec-release.tgz")
+        self.bosh("upload release ipsec-release.tgz")
+        self.bosh("update runtime-config "+outfilename)
+        self.bosh("bosh releases")
 
     def configure(self, filename=None, action=None, force=False):
         force = force or '_FORCE_PREPARE_' in os.environ
