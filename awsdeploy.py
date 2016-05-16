@@ -243,12 +243,16 @@ def deploy(prepared_file, timeout=300):
     else:
         names.append("*."+opts['system_domain'])
 
-    dnsmapping.map_ert_domain(
-        stackname=opts['stack-name'],
-        domain=opts['domain'],
-        route53=route53,
-        elb=elb,
-        names=names)
+    try:
+        dnsmapping.map_ert_domain(
+            stackname=opts['stack-name'],
+            domain=opts['domain'],
+            route53=route53,
+            elb=elb,
+            names=names)
+    except Exception as ex:
+        print ex
+        print "Unable to create dns mappings, create manually"
     vpc = ec2.Vpc(stack_vars['PcfVpc'])
     ops = configure_ops_manager(opts, stack_vars, ops_manager_inst, vpc)
     ops.create_ert_databases(opts)
@@ -260,6 +264,11 @@ def deploy(prepared_file, timeout=300):
 
     ops.wait_for_deployed('p-bosh', timeout=timeout)
     ops.bosh("status")
+    try:
+        ops.configure_ipsec()
+    except Exception as ex:
+        print ex
+        print "Unable to configure ipsec"
     ops.install_elastic_runtime(opts, timeout)
     ops.configure_elastic_runtime(opts, timeout)
     ops.bosh("vms", ignore_error='No deployments')
