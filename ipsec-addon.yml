@@ -1,0 +1,37 @@
+releases:
+- {name: ipsec, version: 1.0.0}
+
+addons:
+- name: ipsec-addon
+  jobs:
+  - name: ipsec
+    release: ipsec
+  properties:
+    ipsec:
+      ipsec_subnets:
+      - 10.0.1.1/20
+      no_ipsec_subnets:
+      - 10.0.1.1/32   # gateway
+      - 10.0.1.10/32  # bosh director
+      instance_certificate: |
+        -----BEGIN CERTIFICATE-----
+        MIIEMDCCAhigAwIBAgIRAIvrBY2TttU/LeRhO+V1t0YwDQYJKoZIhvcNAQELBQAw
+        ...
+        -----END CERTIFICATE-----
+      instance_private_key: |
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEogIBAAKCAQEAtAkBjrzr5x9g0aWgyDEmLd7m9u/ZzpK7UScfANLaN7JiNz3c
+        ...
+        -----END RSA PRIVATE KEY-----
+      ca_certificates:
+        - |
+          -----BEGIN CERTIFICATE-----
+          MIIFCTCCAvGgAwIBAgIBATANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDEwl0ZXN0
+          ...
+          -----END CERTIFICATE-----
+        - |
+          -----BEGIN CERTIFICATE-----
+          MIIFCTCCAvGgAwIBAgIBATAAYDVQQDEwl0ZXN0NBgkqhkiG9w0BAQsFADAUMRIwE
+          ...
+          -----END CERTIFICATE-----
+      prestart_timeout: 30 
