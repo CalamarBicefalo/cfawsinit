@@ -15,7 +15,7 @@ with Elastic Runtime tile staged.
 4. Creates Elastic Runtime
 5. Registers correct dns entries for the domain 
 6. Supports HA configuration in 1.7
-7. Supports installing ipsec bosh addon
+7. Supports installing ipsec bosh addon https://docs.pivotal.io/addon-ipsec/installing.html
 
 ## TODO
 1. Autocreate self signed ssl cert and arn
