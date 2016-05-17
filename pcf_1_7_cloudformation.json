@@ -129,7 +129,14 @@
         "Tags": [
           {
             "Key": "Name",
-            "Value": "pcf-vpc"
+            "Value": {
+              "Fn::Join": [ "-",
+                [
+                  { "Ref" : "AWS::StackName" },
+                  "pcf-vpc"
+                ]
+              ]
+            }
           }
         ]
       }
@@ -166,6 +173,10 @@
           {
             "Key": "Name",
             "Value": "pcf-public-subnet"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "public"
           }
         ]
       }
@@ -187,6 +198,10 @@
           {
             "Key": "Name",
             "Value": "pcf-public-subnet2"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "public"
           }
         ]
       }
@@ -208,6 +223,10 @@
           {
             "Key": "Name",
             "Value": "pcf-public-subnet3"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "public"
           }
         ]
       }
@@ -229,6 +248,10 @@
           {
             "Key": "Name",
             "Value": "pcf-infrastructure-subnet"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "bosh"
           }
         ]
       }
@@ -250,6 +273,10 @@
           {
             "Key": "Name",
             "Value": "pcf-private-subnet"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "private"
           }
         ]
       }
@@ -271,6 +298,10 @@
           {
             "Key": "Name",
             "Value": "pcf-private-subnet2"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "private"
           }
         ]
       }
@@ -292,6 +323,10 @@
           {
             "Key": "Name",
             "Value": "pcf-private-subnet3"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "private"
           }
         ]
       }
@@ -779,6 +814,10 @@
           {
             "Key": "Name",
             "Value": "pcf-rds-subnet-1"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "rds"
           }
         ]
       }
@@ -801,6 +840,10 @@
           {
             "Key": "Name",
             "Value": "pcf-rds-subnet-2"
+          },
+          {
+            "Key": "subnet_type",
+            "Value": "rds"
           }
         ]
       }
