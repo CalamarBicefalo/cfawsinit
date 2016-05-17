@@ -15,6 +15,7 @@ with Elastic Runtime tile staged.
 4. Creates Elastic Runtime
 5. Registers correct dns entries for the domain 
 6. Supports HA configuration in 1.7
+7. Supports installing ipsec bosh addon
 
 ## TODO
 1. Autocreate self signed ssl cert and arn
@@ -65,6 +66,8 @@ PIVNET_TOKEN: h6TTTTTTT
 __PREPARED__: true
 date: 2016-05-11 15:56:34.506636
 domain: mjog0f64e4.pcf-practice.com
+apps_domain: mjog0f64e4.pcf-practice.com
+system_domain: mjog0f64e4.pcf-practice.com
 elastic-runtime:
   beta-ok: false
   cloudformation-template: pcf_1_7_cloudformation.json
@@ -89,7 +92,15 @@ rds-username: dbadmin
 region: us-west-2
 ssh_key_name: mjog
 ssh_private_key_path: /Users/mjog/.ssh/piv-ec2-mjog.pem
+ssl_cert_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ssl_key_file: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
 ssl_cert_arn: arn:aws:iam::375783000519:server-certificate/mjogCertificate
+skip_cert_verify: true
+ipsec_instance_certificate: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ipsec_instance_private_key: /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-private-key.pem
+ipsec_ca_certificates:
+  - /Users/mjog/CFWORK/cfawsinit/Selfsigned/my-certificate.pem
+ipsec_release: ipsec-1.0.0.tgz
 stack-name: mjog-pcf-0f64e4
 uid: 0f64e4
 _START_INSTALLS_: false
