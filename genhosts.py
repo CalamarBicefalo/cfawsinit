@@ -15,16 +15,13 @@ def genhosts(elbip, sysdomain, outfile=sys.stdout):
         'loggregator',
         'doppler']
 
-    print >>outfile, "#"*16, "Generated for /etc/hosts by cfawsinit", "#"*16
-
     print >>outfile, elbip, sysdomain
     for prefix in SYS_PREFIXES:
         print >>outfile, elbip, prefix+"."+sysdomain
-    print >>outfile, "#"*16, "Generated for /etc/hosts by cfawsinit", "#"*16
 
 
-def get_elbip(elb, stackname):
-    lbname = stackname + "-pcf-elb"
+def get_elbip(elb, stackname, lbsuffix="-pcf-elb"):
+    lbname = stackname + lbsuffix
     resp = elb.describe_load_balancers(
         LoadBalancerNames=[lbname])
     if len(resp.get('LoadBalancerDescriptions', [])) == 0:
@@ -56,6 +53,19 @@ def fix_args(args):
         args.outfile = open(args.outfile, "wt")
 
 
+def genallhosts(elb, args):
+    print >>args.outfile, "#"*16,
+    print >>args.outfile, "Generated for /etc/hosts by cfawsinit", "#"*16
+    genhosts(
+        get_elbip(elb, args.stack_name),
+        args.system_domain,
+        args.outfile)
+    print >>args.outfile, get_elbip(elb, args.stack_name, "-pcf-ssh-elb"),
+    print >>args.outfile, "ssh."+args.system_domain
+    print >>args.outfile, "#"*16,
+    print >>args.outfile, "Generated for /etc/hosts by cfawsinit", "#"*16
+
+
 def main(argv):
     args = get_args().parse_args(argv)
 
@@ -67,11 +77,7 @@ def main(argv):
     fix_args(args)
     session = Session(profile_name=args.profile, region_name=args.region)
     elb = session.client("elb")
-
-    genhosts(
-        get_elbip(elb, args.stack_name),
-        args.system_domain,
-        args.outfile)
+    genallhosts(elb, args)
 
 
 if __name__ == "__main__":
