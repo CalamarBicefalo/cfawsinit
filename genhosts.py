@@ -10,7 +10,8 @@ def genhosts(elbip, sysdomain, outfile=sys.stdout):
         'console',
         'uaa',
         'apps',
-        'login']
+        'login',
+        'api']
 
     print >>outfile, "#"*16, "Generated for /etc/hosts by cfawsinit", "#"*16
 
