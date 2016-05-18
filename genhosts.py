@@ -12,7 +12,8 @@ def genhosts(elbip, sysdomain, outfile=sys.stdout):
         'apps',
         'login',
         'api',
-        'loggregator']
+        'loggregator',
+        'doppler']
 
     print >>outfile, "#"*16, "Generated for /etc/hosts by cfawsinit", "#"*16
 
