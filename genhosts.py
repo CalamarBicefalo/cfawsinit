@@ -78,6 +78,7 @@ def main(argv):
     session = Session(profile_name=args.profile, region_name=args.region)
     elb = session.client("elb")
     genallhosts(elb, args)
+    return 0
 
 
 if __name__ == "__main__":
